@@ -12,11 +12,11 @@ cap.set(cv2.CAP_PROP_EXPOSURE, -10.0)
 canny_thresh = 100
 min_hull_area = 1000
 
-H_LOW = 40
-H_HIGH = 80
-S_LOW = 80
+H_LOW = 40#40
+H_HIGH = 60#80
+S_LOW = 87#80
 S_HIGH = 255
-V_LOW = 80
+V_LOW = 67#80
 V_HIGH = 255
 
 
@@ -30,16 +30,16 @@ def hsvThreshold(src):
 
 # Dilate and then erode to eliminate holes
 def closeFrame(src):
-    kernel = np.ones((5, 5), np.uint8)
-    dst = cv2.dilate(src, kernel, iterations=3)
-    dst = cv2.erode(dst, kernel, iterations=3)
+    kernel = np.ones((3, 3), np.uint8)
+    dst = cv2.dilate(src, kernel, iterations=1)
+    dst = cv2.erode(dst, kernel, iterations=1)
     return dst
 
 # Erode and then dilate to eliminate noise
 def openFrame(src):
-    kernel = np.ones((5, 5), np.uint8)
-    dst = cv2.erode(src, kernel, iterations=3)
-    dst = cv2.dilate(dst, kernel, iterations=3)
+    kernel = np.ones((3, 3), np.uint8)
+    dst = cv2.erode(src, kernel, iterations=1)
+    dst = cv2.dilate(dst, kernel, iterations=1)
     return dst
 
 def findHulls(src):
@@ -120,21 +120,44 @@ def findTargets(angledBoxes):
     return targets
 
 # Get bounding box from target pair
-def sorroundTarget(target):
+def sorroundTargetWithBox(target):
     points = cv2.boxPoints(target[0][0])
     points = np.append(points, cv2.boxPoints(target[1][0]))
     minX, minY, maxX, maxY = 10000000, 1000000, 0, 0
     for i in range(0, len(points), 2):
         x, y = points[i], points[i+1] 
-        minX = x if x < minX else minX
-        minY = y if y < minY else minY
-        maxX = x if x > maxX else maxX
-        maxY = y if y > maxY else maxY
+        #minX = x if x < minX else minX
+        #minY = y if y < minY else minY
+        #maxX = x if x > maxX else maxX
+        #maxY = y if y > maxY else maxY
+        minX = min(x, minX)
+        minY = min(y, minY)
+        maxX = max(x, maxX)
+        maxY = max(y, maxY)
     return (minX, minY, maxX, maxY)
 
+# Point order from https://namkeenman.wordpress.com/2015/12/18/open-cv-determine-angle-of-rotatedrect-minarearect
+def sorroundTargetPoly(target):
+    leftRectPoints = cv2.boxPoints(target[0][0])
+    rightRectPoints = cv2.boxPoints(target[1][0])
+    #print(leftRectPoints)
 
+                                        # Target seen at an angle
+    minX = leftRectPoints[3][0]         #       maxYL
+    maxX = rightRectPoints[1][0]        #         /-------/              maxYR
+    minYL = leftRectPoints[0][1]        #        /       /          \------\               |¯¯¯---____
+    maxYL = leftRectPoints[2][1]        #       /       /            \      \        =>    |          |
+    minYR = rightRectPoints[0][1]       #      /       /              \      \             |          |
+    maxYR = rightRectPoints[2][1]       #     /       /                \______\            |____---¯¯¯
+                                        #    /_______/               minYR     maxX
+                                        #  minX     minYL       
 
+    #return ((minX, minYL), (minX, maxYL), (maxX, maxYR), (maxX, minYR))
+    return np.array([[minX, minYL], [minX, maxYL], [maxX, maxYR], [maxX, minYR]], np.int32)
 
+# Drawing utilities
+def drawContours(img, contours):
+    cv2.drawContours(img, contours, -1, (255, 0,0), 3)
 
 class AveragingBuffer(object):
     def __init__(self, maxlen):
@@ -163,8 +186,10 @@ while(True):
     dst = smoothImage(frame)
     dst = cv2.cvtColor(dst, cv2.COLOR_BGR2HSV)
     dst = hsvThreshold(dst)
-    dst = closeFrame(dst)
     dst = openFrame(dst)
+    dst = closeFrame(dst)
+
+    #cv2.imshow("bruh", dst)
 
     # Find convex hulls over thresholded image
     hulls = findHulls(dst)
@@ -174,23 +199,32 @@ while(True):
     hulls = sorted(hulls, key=lambda cnt: cv2.contourArea(cnt), reverse=True)
 
     # Initialize mat for target box drawing
-    drawing = np.zeros((dst.shape[0], dst.shape[1], 3), dtype=np.uint8)
+    #drawing = np.zeros((dst.shape[0], dst.shape[1], 3), dtype=np.uint8)
 
     if len(hulls) > 0:
         # Find rotated rect and its respective angle from each hull (an angled box is a pair of a rect and its angle(float))
-        angledBoxes = findBoxesAndAngles(hulls, drawing)
+        angledBoxes = findBoxesAndAngles(hulls, frame)
         # Analyze boxes and return valid targets (a target in this case is a pair of two angled boxes)
         targets = findTargets(angledBoxes)
+
+        drawContours(frame, hulls)
 
         if len(targets) > 0:
             # Arbitrairly choose the first target
             target = targets[0]
+
             # Get bounding box sourounding target
-            targetBox = sorroundTarget(target)
+            targetBox = sorroundTargetWithBox(target)
+
+            # Get polygon sourounding target
+            targetPoly = sorroundTargetPoly(target)
 
             # Draw target box
             color = (0, 200, 0)
-            cv2.rectangle(drawing, (targetBox[0], targetBox[1]), (targetBox[2], targetBox[3]), color, 3) 
+            cv2.rectangle(frame, (targetBox[0], targetBox[1]), (targetBox[2], targetBox[3]), color, 3) 
+            color = (0, 0, 200)
+            pts = targetPoly.reshape((-1,1,2))
+            cv2.polylines(frame, [pts], True, color, thickness=2)
 
 
     # Get timestamp and calculate time difference
@@ -204,7 +238,7 @@ while(True):
 
 
     # Display original frame with target box on top
-    result = frame + drawing
+    result = frame #+ drawing
     cv2.imshow('result', result)
 
 
