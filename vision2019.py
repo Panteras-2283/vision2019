@@ -1,23 +1,37 @@
+#!/usr/bin/python3.5
+# coding: utf8
 import numpy as np
 import cv2
 import datetime
-from datetime import timedelta
 import collections
+from datetime import timedelta
+from networktables import NetworkTables
+
+
+NetworkTables.initialize(server='10.22.83.2')
+table = NetworkTables.getDefault().getTable('SmartDashboard')\
+
 
 cap = cv2.VideoCapture(0)
-cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0)
-cap.set(cv2.CAP_PROP_EXPOSURE, -10.0)
+#cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0)
+#cap.set(cv2.CAP_PROP_EXPOSURE, -10.0)
 
 # Global variables
 canny_thresh = 100
 min_hull_area = 1000
 
-H_LOW = 40#40
-H_HIGH = 60#80
-S_LOW = 87#80
+H_LOW = 40
+H_HIGH = 80
+S_LOW = 30#80
 S_HIGH = 255
-V_LOW = 67#80
+V_LOW = 70#80
 V_HIGH = 255
+
+MORPH_KERNEL = None#np.ones((3, 3), np.uint8)
+MORPH_ANCHOR = (-1, -1)
+MORPH_ITERATIONS = 3
+MORPH_BORDER_TYPE = cv2.BORDER_CONSTANT
+MORPH_BORDER_VALUE = (-1)
 
 
 def smoothImage(src):
@@ -30,16 +44,14 @@ def hsvThreshold(src):
 
 # Dilate and then erode to eliminate holes
 def closeFrame(src):
-    kernel = np.ones((3, 3), np.uint8)
-    dst = cv2.dilate(src, kernel, iterations=1)
-    dst = cv2.erode(dst, kernel, iterations=1)
+    dst = cv2.dilate(src, MORPH_KERNEL, MORPH_ANCHOR, iterations=MORPH_ITERATIONS, borderType = MORPH_BORDER_TYPE, borderValue = MORPH_BORDER_VALUE)
+    dst = cv2.erode(dst, MORPH_KERNEL, MORPH_ANCHOR, iterations=MORPH_ITERATIONS, borderType = MORPH_BORDER_TYPE, borderValue = MORPH_BORDER_VALUE)
     return dst
 
 # Erode and then dilate to eliminate noise
 def openFrame(src):
-    kernel = np.ones((3, 3), np.uint8)
-    dst = cv2.erode(src, kernel, iterations=1)
-    dst = cv2.dilate(dst, kernel, iterations=1)
+    dst = cv2.erode(src, MORPH_KERNEL, MORPH_ANCHOR, iterations=MORPH_ITERATIONS, borderType = MORPH_BORDER_TYPE, borderValue = MORPH_BORDER_VALUE)
+    dst = cv2.dilate(dst, MORPH_KERNEL, MORPH_ANCHOR, iterations=MORPH_ITERATIONS, borderType = MORPH_BORDER_TYPE, borderValue = MORPH_BORDER_VALUE)
     return dst
 
 def findHulls(src):
@@ -51,8 +63,9 @@ def findHulls(src):
     # Get convex hull for each contour
     hulls = []
     for i in range(len(contours)):
-        hull = cv2.convexHull(contours[i])
-        hulls.append(hull)
+        if len(contours) > 0:
+            hull = cv2.convexHull(contours[i])
+            hulls.append(hull)
     return hulls
 
 
@@ -76,7 +89,7 @@ def findBox(hull):
 # Fit a line that goes through the hull length-wise and return its angle in degrees
 def findFittedLineAngle(hull, drawing):
     rows,cols = drawing.shape[:2]
-    [vx,vy,x,y] = cv2.fitLine(hull, cv2.DIST_L2,0,0.01,0.01)
+    [vx,vy,x,y] = cv2.fitLine(hull, cv2.DIST_L2, 0, 0.01, 0.01)
     #lefty = int((-x*vy/vx) + y)
     #righty = int(((cols-x)*vy/vx)+y)
     #cv2.line(drawing,(cols-1,righty),(0,lefty),(0,255,0),2)
@@ -186,8 +199,8 @@ while(True):
     dst = smoothImage(frame)
     dst = cv2.cvtColor(dst, cv2.COLOR_BGR2HSV)
     dst = hsvThreshold(dst)
-    dst = openFrame(dst)
     dst = closeFrame(dst)
+    dst = openFrame(dst)
 
     #cv2.imshow("bruh", dst)
 
@@ -226,6 +239,13 @@ while(True):
             pts = targetPoly.reshape((-1,1,2))
             cv2.polylines(frame, [pts], True, color, thickness=2)
 
+            centerX = (targetBox[0] + targetBox[2])/2
+            centerY = (targetBox[1] + targetBox[3])/2
+
+            table.putBoolean("rpi/center X", centerX)
+            table.putBoolean("rpi/center Y", centerY)
+            print(centerX)
+
 
     # Get timestamp and calculate time difference
     tEnd = datetime.datetime.now()
@@ -233,14 +253,17 @@ while(True):
 
     # Average time difference over the last 10 frames
     ab.append(tElapsed)
+    framerate = 1000/ab.xbar
 
-    cv2.putText(frame, 'Framerate: {:f}'.format(1000/ab.xbar), (10,450), cv2.FONT_HERSHEY_SIMPLEX, .75,(255,255,255),2, cv2.LINE_AA)
+    cv2.putText(frame, 'Framerate: {:f}'.format(framerate), (10,450), cv2.FONT_HERSHEY_SIMPLEX, .75,(255,255,255),2, cv2.LINE_AA)
 
 
     # Display original frame with target box on top
-    result = frame #+ drawing
-    cv2.imshow('result', result)
+    cv2.imshow('result', frame)
 
+    # Send data to dashboard
+    table.putBoolean("DB/Button 1", True)
+    table.putBoolean("rpi/framrate", framerate)
 
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
