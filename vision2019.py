@@ -248,7 +248,9 @@ while(True):
             aspectRatio = width/height
 
 
-            table.setNumber("rpi/center X", centerX)
+            entryCenterX = table.getEntry("rpi/center X")
+            entryCenterX.setNumber(centerX)
+            #table.setNumber("rpi/center X", centerX)
             table.putNumber("rpi/center Y", centerY)
             table.putNumber("rpi/width", width)
             table.putNumber("rpi/height", height)
