@@ -13,6 +13,8 @@ table = NetworkTables.getDefault().getTable('SmartDashboard')\
 
 
 cap = cv2.VideoCapture(0)
+cap.set(3, 320)
+cap.set(4, 240)
 #cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0)
 #cap.set(cv2.CAP_PROP_EXPOSURE, -10.0)
 
@@ -58,7 +60,7 @@ def findHulls(src):
     # Find edges
     dst = cv2.Canny(src, canny_thresh, canny_thresh*2)
     # Find countours
-    contours, _ = cv2.findContours(dst, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    _, contours, _ = cv2.findContours(dst, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
     # Get convex hull for each contour
     hulls = []
@@ -259,15 +261,15 @@ while(True):
 
 
     # Display original frame with target box on top
-    cv2.imshow('result', frame)
+    #cv2.imshow('result', frame)
 
     # Send data to dashboard
     table.putBoolean("DB/Button 1", True)
     table.putBoolean("rpi/framrate", framerate)
 
 
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+    #if cv2.waitKey(1) & 0xFF == ord('q'):
+    #    break
 
 # When everything done, release the capture
 cap.release()
