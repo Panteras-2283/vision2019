@@ -243,9 +243,16 @@ while(True):
 
             centerX = (targetBox[0] + targetBox[2])/2
             centerY = (targetBox[1] + targetBox[3])/2
+	    width = targetBox[2] - targetBox[0]
+	    height = targetBox[3] - targetBox[1]
+	    aspectRatio = width/height
 
-            table.putBoolean("rpi/center X", centerX)
-            table.putBoolean("rpi/center Y", centerY)
+
+            table.putNumber("rpi/center X", centerX)
+            table.putNumber("rpi/center Y", centerY)
+	    table.putNumber("rpi/width", width)
+	    table.putNumber("rpi/height", height)
+            table.putNumber("rpi/aspect ratio", aspectRatio)
             print(centerX)
 
 
@@ -256,7 +263,7 @@ while(True):
     # Average time difference over the last 10 frames
     ab.append(tElapsed)
     framerate = 1000/ab.xbar
-
+    print("framerate :{}".format(framerate))
     cv2.putText(frame, 'Framerate: {:f}'.format(framerate), (10,450), cv2.FONT_HERSHEY_SIMPLEX, .75,(255,255,255),2, cv2.LINE_AA)
 
 
