@@ -243,15 +243,15 @@ while(True):
 
             centerX = (targetBox[0] + targetBox[2])/2
             centerY = (targetBox[1] + targetBox[3])/2
-	    width = targetBox[2] - targetBox[0]
-	    height = targetBox[3] - targetBox[1]
-	    aspectRatio = width/height
+            width = targetBox[2] - targetBox[0]
+            height = targetBox[3] - targetBox[1]
+            aspectRatio = width/height
 
 
-            table.putNumber("rpi/center X", centerX)
+            table.setNumber("rpi/center X", centerX)
             table.putNumber("rpi/center Y", centerY)
-	    table.putNumber("rpi/width", width)
-	    table.putNumber("rpi/height", height)
+            table.putNumber("rpi/width", width)
+            table.putNumber("rpi/height", height)
             table.putNumber("rpi/aspect ratio", aspectRatio)
             print(centerX)
 
@@ -271,8 +271,8 @@ while(True):
     #cv2.imshow('result', frame)
 
     # Send data to dashboard
-    table.putBoolean("DB/Button 1", True)
-    table.putBoolean("rpi/framrate", framerate)
+    table.putBoolean("DB/LED 0", True)
+    table.putNumber("rpi/framrate", framerate)
 
 
     #if cv2.waitKey(1) & 0xFF == ord('q'):
