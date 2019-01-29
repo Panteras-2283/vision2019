@@ -6,7 +6,7 @@ import cv2
 import datetime
 import collections
 from datetime import timedelta
-from networktables import NetworkTables
+#from networktables import NetworkTables
 from tkinter import *
 
 
