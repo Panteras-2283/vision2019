@@ -1,15 +1,17 @@
 #!/usr/bin/python3.5
 # coding: utf8
 import numpy as np
+import pandas as pd
 import cv2
 import datetime
 import collections
 from datetime import timedelta
 from networktables import NetworkTables
+from tkinter import *
 
 
-NetworkTables.initialize(server='10.22.83.2')
-table = NetworkTables.getDefault().getTable('SmartDashboard')\
+#NetworkTables.initialize(server='10.22.83.2')
+#table = NetworkTables.getDefault().getTable('SmartDashboard')
 
 
 cap = cv2.VideoCapture(0)
@@ -23,10 +25,10 @@ canny_thresh = 100
 min_hull_area = 1000
 
 H_LOW = 40
-H_HIGH = 80
-S_LOW = 30#80
+H_HIGH = 60
+S_LOW = 90
 S_HIGH = 255
-V_LOW = 70#80
+V_LOW = 50
 V_HIGH = 255
 
 MORPH_KERNEL = None#np.ones((3, 3), np.uint8)
@@ -60,7 +62,7 @@ def findHulls(src):
     # Find edges
     dst = cv2.Canny(src, canny_thresh, canny_thresh*2)
     # Find countours
-    _, contours, _ = cv2.findContours(dst, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    contours, _ = cv2.findContours(dst, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
     # Get convex hull for each contour
     hulls = []
@@ -141,10 +143,6 @@ def sorroundTargetWithBox(target):
     minX, minY, maxX, maxY = 10000000, 1000000, 0, 0
     for i in range(0, len(points), 2):
         x, y = points[i], points[i+1] 
-        #minX = x if x < minX else minX
-        #minY = y if y < minY else minY
-        #maxX = x if x > maxX else maxX
-        #maxY = y if y > maxY else maxY
         minX = min(x, minX)
         minY = min(y, minY)
         maxX = max(x, maxX)
@@ -189,8 +187,38 @@ class AveragingBuffer(object):
         self.xbar=self.xbar+(x-self.xbar)/float(len(self.q))
 
 
+
+# main
 ab = AveragingBuffer(10)
-while(True):
+
+# pandas
+columns = ['yDistance', 'xDistance', 'theta', 'width', 'height', 'centerX', 'centerY', 'aspectRatio', 'heightRatio']
+df = pd.DataFrame(columns=columns)
+currentIndex = 0
+
+# setup tkinter
+window = Tk()
+window.geometry("200x200")
+window.title("Data Gathering") 
+thetaLbl = Label(window, text="Angle")
+thetaLbl.grid(column=0, row=0)
+thetaSpin = Spinbox(window, from_=0, to=100)
+thetaSpin.grid(column=1,row=0)
+
+yDistLbl = Label(window, text="Y Distance")
+yDistLbl.grid(column=0, row=1)
+yDistSpin = Spinbox(window, from_=0, to=100)
+yDistSpin.grid(column=1,row=1)
+
+xDistLbl = Label(window, text="X Distance")
+xDistLbl.grid(column=0, row=2)
+xDistSpin = Spinbox(window, from_=0, to=100)
+xDistSpin.grid(column=1,row=2)
+
+
+def visionLoop():
+    global currentIndex
+
     # Get timestamp
     tStart = datetime.datetime.now()
 
@@ -241,19 +269,39 @@ while(True):
             pts = targetPoly.reshape((-1,1,2))
             cv2.polylines(frame, [pts], True, color, thickness=2)
 
+            # box properties
             centerX = (targetBox[0] + targetBox[2])/2
             centerY = (targetBox[1] + targetBox[3])/2
             width = targetBox[2] - targetBox[0]
             height = targetBox[3] - targetBox[1]
             aspectRatio = width/height
 
+            # polygon properties
+            heightL = targetPoly[1][1] - targetPoly[0][1]
+            heightR = targetPoly[2][1] - targetPoly[3][1]
+            heightRatio = heightL/heightR
 
-            table.putNumber("rpi/center X", centerX)
-            table.putNumber("rpi/center Y", centerY)
-            table.putNumber("rpi/width", width)
-            table.putNumber("rpi/height", height)
-            table.putNumber("rpi/aspect ratio", aspectRatio)
-            print(centerX)
+            if cv2.waitKey(1) & 0xFF == ord('c'):
+                yDistance = yDistSpin.get()
+                xDistance = xDistSpin.get()
+                theta = thetaSpin.get()
+
+                df.loc[currentIndex] = [yDistance, xDistance, theta, width, height, centerX, centerY, aspectRatio, heightRatio]
+                print(df)
+                df.to_csv("data/dataBuffer.csv")
+                currentIndex += 1
+
+                #wait for button release
+                while 0xFF == ord('c'):
+                    pass
+
+
+            #table.putNumber("rpi/center X", centerX)
+            #table.putNumber("rpi/center Y", centerY)
+            #table.putNumber("rpi/width", width)
+            #table.putNumber("rpi/height", height)
+            #table.putNumber("rpi/aspect ratio", aspectRatio)
+            #table.putNumber("rpi/height ratio", heightRatio)
 
 
     # Get timestamp and calculate time difference
@@ -263,21 +311,29 @@ while(True):
     # Average time difference over the last 10 frames
     ab.append(tElapsed)
     framerate = 1000/ab.xbar
-    print("framerate :{}".format(framerate))
+    #print("framerate :{}".format(framerate))
     cv2.putText(frame, 'Framerate: {:f}'.format(framerate), (10,450), cv2.FONT_HERSHEY_SIMPLEX, .75,(255,255,255),2, cv2.LINE_AA)
 
 
     # Display original frame with target box on top
-    #cv2.imshow('result', frame)
+    cv2.imshow('result', frame)
 
     # Send data to dashboard
-    table.putBoolean("DB/LED 0", True)
-    table.putNumber("rpi/framrate", framerate)
+    #table.putBoolean("DB/LED 0", True)
+    #table.putNumber("rpi/framrate", framerate)
 
 
     #if cv2.waitKey(1) & 0xFF == ord('q'):
     #    break
 
+    window.after(10, visionLoop)
+
+
+window.after(10, visionLoop)
+window.mainloop()
+
+timestamp = datetime.datetime.now().strftime("%Y-%m-%d-%H;%M;%S")
+df.to_csv("data/data-{}.csv".format(timestamp))
 # When everything done, release the capture
 cap.release()
 cv2.destroyAllWindows()
