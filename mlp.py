@@ -21,13 +21,11 @@ X_train = scaler.transform(X_train)
 X_test = scaler.transform(X_test)
 
 # Learn
-mlp = MLPRegressor(hidden_layer_sizes=(7, 7, 7), max_iter=1000)
+mlp = MLPRegressor(hidden_layer_sizes=(7, 7, 7), max_iter=10000)
 mlp.fit(X_train, y_train)
 
 # Test
-prediction = mlp.predict([X_test[0]])
-#print(confusion_matrix(y_test,predictions)) 
-#print(classification_report(y_test, predictions)) 
+prediction = mlp.predict(X_test)
 score = mlp.score(X_test, y_test)
 print(score) 
 print(prediction)

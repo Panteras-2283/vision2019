@@ -6,29 +6,24 @@ import cv2
 import datetime
 import collections
 from datetime import timedelta
-#from networktables import NetworkTables
 from tkinter import *
-
-
-#NetworkTables.initialize(server='10.22.83.2')
-#table = NetworkTables.getDefault().getTable('SmartDashboard')
 
 
 cap = cv2.VideoCapture(0)
 cap.set(3, 320)
 cap.set(4, 240)
-#cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0)
-#cap.set(cv2.CAP_PROP_EXPOSURE, -10.0)
+cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0)
+cap.set(cv2.CAP_PROP_EXPOSURE, -10.0)
 
 # Global variables
 canny_thresh = 100
 min_hull_area = 1000
 
-H_LOW = 40
-H_HIGH = 60
-S_LOW = 90
+H_LOW = 70
+H_HIGH = 90
+S_LOW = 100
 S_HIGH = 255
-V_LOW = 50
+V_LOW = 150
 V_HIGH = 255
 
 MORPH_KERNEL = None#np.ones((3, 3), np.uint8)

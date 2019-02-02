@@ -6,27 +6,28 @@ import datetime
 import collections
 from datetime import timedelta
 from networktables import NetworkTables
+from robotVector import calculateRobotVector
 
 
 NetworkTables.initialize(server='10.22.83.2')
-table = NetworkTables.getDefault().getTable('SmartDashboard')\
+table = NetworkTables.getDefault().getTable('SmartDashboard')
 
 
 cap = cv2.VideoCapture(0)
-cap.set(3, 320)
-cap.set(4, 240)
+cap.set(3, 640)
+cap.set(4, 360)
 #cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0)
 #cap.set(cv2.CAP_PROP_EXPOSURE, -10.0)
 
 # Global variables
 canny_thresh = 100
-min_hull_area = 1000
+min_hull_area = 500
 
-H_LOW = 40
-H_HIGH = 80
-S_LOW = 30#80
+H_LOW = 0#40
+H_HIGH = 180#80
+S_LOW = 20#30#80
 S_HIGH = 255
-V_LOW = 70#80
+V_LOW = 200#70#80
 V_HIGH = 255
 
 MORPH_KERNEL = None#np.ones((3, 3), np.uint8)
@@ -60,7 +61,7 @@ def findHulls(src):
     # Find edges
     dst = cv2.Canny(src, canny_thresh, canny_thresh*2)
     # Find countours
-    _, contours, _ = cv2.findContours(dst, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    contours, _ = cv2.findContours(dst, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
     # Get convex hull for each contour
     hulls = []
@@ -190,6 +191,7 @@ class AveragingBuffer(object):
 
 
 ab = AveragingBuffer(10)
+cv2.namedWindow('result', cv2.WINDOW_KEEPRATIO)
 while(True):
     # Get timestamp
     tStart = datetime.datetime.now()
@@ -241,19 +243,30 @@ while(True):
             pts = targetPoly.reshape((-1,1,2))
             cv2.polylines(frame, [pts], True, color, thickness=2)
 
+            # box properties
             centerX = (targetBox[0] + targetBox[2])/2
             centerY = (targetBox[1] + targetBox[3])/2
             width = targetBox[2] - targetBox[0]
             height = targetBox[3] - targetBox[1]
             aspectRatio = width/height
 
+            # polygon properties
+            heightL = targetPoly[1][1] - targetPoly[0][1]
+            heightR = targetPoly[2][1] - targetPoly[3][1]
+            heightRatio = heightL/heightR
+
+            maxU = targetPoly[0][0] 
+            minU = targetPoly[2][0] 
+            maxVR = targetPoly[1][1] 
+            maxVL = targetPoly[2][1] 
+            calculateRobotVector(minU, maxU, maxVL, maxVR)
 
             table.putNumber("rpi/center X", centerX)
             table.putNumber("rpi/center Y", centerY)
             table.putNumber("rpi/width", width)
             table.putNumber("rpi/height", height)
             table.putNumber("rpi/aspect ratio", aspectRatio)
-            print(centerX)
+            #print(centerX)
 
 
     # Get timestamp and calculate time difference
@@ -263,12 +276,12 @@ while(True):
     # Average time difference over the last 10 frames
     ab.append(tElapsed)
     framerate = 1000/ab.xbar
-    print("framerate :{}".format(framerate))
+    #print("framerate :{}".format(framerate))
     cv2.putText(frame, 'Framerate: {:f}'.format(framerate), (10,450), cv2.FONT_HERSHEY_SIMPLEX, .75,(255,255,255),2, cv2.LINE_AA)
 
 
     # Display original frame with target box on top
-    #cv2.imshow('result', frame)
+    cv2.imshow('result', frame)
 
     # Send data to dashboard
     table.putBoolean("DB/LED 0", True)
