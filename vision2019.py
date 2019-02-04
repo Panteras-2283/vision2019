@@ -16,18 +16,18 @@ table = NetworkTables.getDefault().getTable('SmartDashboard')
 cap = cv2.VideoCapture(0)
 cap.set(3, 640)
 cap.set(4, 360)
-#cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0)
-#cap.set(cv2.CAP_PROP_EXPOSURE, -10.0)
+#cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 100000)
+#cap.set(cv2.CAP_PROP_EXPOSURE, 10000.0)
 
 # Global variables
 canny_thresh = 100
 min_hull_area = 500
 
-H_LOW = 0#40
-H_HIGH = 180#80
-S_LOW = 20#30#80
+H_LOW = 40
+H_HIGH = 90
+S_LOW = 0#30#80
 S_HIGH = 255
-V_LOW = 200#70#80
+V_LOW = 140#70#80
 V_HIGH = 255
 
 MORPH_KERNEL = None#np.ones((3, 3), np.uint8)

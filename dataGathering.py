@@ -8,22 +8,24 @@ import collections
 from datetime import timedelta
 from tkinter import *
 
+IMAGE_HEIGHT = 360
+IMAGE_WIDTH = 640
 
 cap = cv2.VideoCapture(0)
-cap.set(3, 320)
-cap.set(4, 240)
+cap.set(4, IMAGE_HEIGHT)
+cap.set(3, IMAGE_WIDTH)
 cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0)
-cap.set(cv2.CAP_PROP_EXPOSURE, -10.0)
+cap.set(cv2.CAP_PROP_EXPOSURE, -50.0)
 
 # Global variables
 canny_thresh = 100
-min_hull_area = 1000
+min_hull_area = 500
 
-H_LOW = 70
-H_HIGH = 90
-S_LOW = 100
+H_LOW = 50
+H_HIGH = 70
+S_LOW = 170#30#80
 S_HIGH = 255
-V_LOW = 150
+V_LOW = 20#70#80
 V_HIGH = 255
 
 MORPH_KERNEL = None#np.ones((3, 3), np.uint8)
@@ -210,6 +212,14 @@ xDistLbl.grid(column=0, row=2)
 xDistSpin = Spinbox(window, from_=0, to=100)
 xDistSpin.grid(column=1,row=2)
 
+bboxX = Label(window, text="BBox Center X")
+bboxX.grid(column=0, row=3)
+bboxH = Label(window, text="BBox Height")
+bboxH.grid(column=0, row=4)
+bboxAR = Label(window, text="BBox Aspect R.")
+bboxAR.grid(column=0, row=5)
+bboxHR = Label(window, text="BBox Height R.")
+bboxHR.grid(column=0, row=6)
 
 def visionLoop():
     global currentIndex
@@ -265,8 +275,8 @@ def visionLoop():
             cv2.polylines(frame, [pts], True, color, thickness=2)
 
             # box properties
-            centerX = (targetBox[0] + targetBox[2])/2
-            centerY = (targetBox[1] + targetBox[3])/2
+            centerX = ((targetBox[0] + targetBox[2])/2) - IMAGE_WIDTH/2
+            centerY = ((targetBox[1] + targetBox[3])/2) - (IMAGE_HEIGHT/2)
             width = targetBox[2] - targetBox[0]
             height = targetBox[3] - targetBox[1]
             aspectRatio = width/height
@@ -275,6 +285,12 @@ def visionLoop():
             heightL = targetPoly[1][1] - targetPoly[0][1]
             heightR = targetPoly[2][1] - targetPoly[3][1]
             heightRatio = heightL/heightR
+
+
+            bboxX.config(text="BBox Center X: {0:.2f}".format(centerX))
+            bboxH.config(text="BBox Height: {0:.2f}".format(height))
+            bboxAR.config(text="BBox Aspect R.: {0:.2f}".format(aspectRatio))
+            bboxHR.config(text="BBox Height R.: {0:.2f}".format(heightRatio))
 
             if cv2.waitKey(1) & 0xFF == ord('c'):
                 yDistance = yDistSpin.get()
