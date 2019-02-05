@@ -5,29 +5,32 @@ import cv2
 import datetime
 import collections
 from datetime import timedelta
-from networktables import NetworkTables
+#from networktables import NetworkTables
 from robotVector import calculateRobotVector
 
 
-NetworkTables.initialize(server='10.22.83.2')
-table = NetworkTables.getDefault().getTable('SmartDashboard')
+#NetworkTables.initialize(server='10.22.83.2')
+#table = NetworkTables.getDefault().getTable('SmartDashboard')
 
+
+IMAGE_HEIGHT = 360
+IMAGE_WIDTH = 640
 
 cap = cv2.VideoCapture(0)
-cap.set(3, 640)
-cap.set(4, 360)
-#cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 100000)
-#cap.set(cv2.CAP_PROP_EXPOSURE, 10000.0)
+cap.set(4, IMAGE_HEIGHT)
+cap.set(3, IMAGE_WIDTH)
+cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0)
+cap.set(cv2.CAP_PROP_EXPOSURE, -50.0)
 
 # Global variables
 canny_thresh = 100
 min_hull_area = 500
 
-H_LOW = 40
-H_HIGH = 90
-S_LOW = 0#30#80
+H_LOW = 50
+H_HIGH = 70
+S_LOW = 170#30#80
 S_HIGH = 255
-V_LOW = 140#70#80
+V_LOW = 20#70#80
 V_HIGH = 255
 
 MORPH_KERNEL = None#np.ones((3, 3), np.uint8)
@@ -191,7 +194,7 @@ class AveragingBuffer(object):
 
 
 ab = AveragingBuffer(10)
-cv2.namedWindow('result', cv2.WINDOW_KEEPRATIO)
+#cv2.namedWindow('result', cv2.WINDOW_KEEPRATIO)
 while(True):
     # Get timestamp
     tStart = datetime.datetime.now()
@@ -259,13 +262,13 @@ while(True):
             minU = targetPoly[2][0] 
             maxVR = targetPoly[1][1] 
             maxVL = targetPoly[2][1] 
-            calculateRobotVector(minU, maxU, maxVL, maxVR)
+            #calculateRobotVector(minU, maxU, maxVL, maxVR)
 
-            table.putNumber("rpi/center X", centerX)
-            table.putNumber("rpi/center Y", centerY)
-            table.putNumber("rpi/width", width)
-            table.putNumber("rpi/height", height)
-            table.putNumber("rpi/aspect ratio", aspectRatio)
+            #table.putNumber("rpi/center X", centerX)
+            #table.putNumber("rpi/center Y", centerY)
+            #table.putNumber("rpi/width", width)
+            #table.putNumber("rpi/height", height)
+            #table.putNumber("rpi/aspect ratio", aspectRatio)
             #print(centerX)
 
 
@@ -284,8 +287,8 @@ while(True):
     cv2.imshow('result', frame)
 
     # Send data to dashboard
-    table.putBoolean("DB/LED 0", True)
-    table.putNumber("rpi/framrate", framerate)
+    #table.putBoolean("DB/LED 0", True)
+    #table.putNumber("rpi/framrate", framerate)
 
 
     #if cv2.waitKey(1) & 0xFF == ord('q'):

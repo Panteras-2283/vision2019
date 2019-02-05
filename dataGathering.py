@@ -302,10 +302,6 @@ def visionLoop():
                 df.to_csv("data/dataBuffer.csv")
                 currentIndex += 1
 
-                #wait for button release
-                while 0xFF == ord('c'):
-                    pass
-
 
             #table.putNumber("rpi/center X", centerX)
             #table.putNumber("rpi/center Y", centerY)
@@ -322,7 +318,7 @@ def visionLoop():
     # Average time difference over the last 10 frames
     ab.append(tElapsed)
     framerate = 1000/ab.xbar
-    #print("framerate :{}".format(framerate))
+    print("framerate :{}".format(framerate))
     cv2.putText(frame, 'Framerate: {:f}'.format(framerate), (10,450), cv2.FONT_HERSHEY_SIMPLEX, .75,(255,255,255),2, cv2.LINE_AA)
 
 
