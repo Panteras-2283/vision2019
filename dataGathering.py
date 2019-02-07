@@ -15,17 +15,17 @@ cap = cv2.VideoCapture(0)
 cap.set(4, IMAGE_HEIGHT)
 cap.set(3, IMAGE_WIDTH)
 cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0)
-cap.set(cv2.CAP_PROP_EXPOSURE, -50.0)
+cap.set(cv2.CAP_PROP_EXPOSURE, -20.0)
 
 # Global variables
 canny_thresh = 100
 min_hull_area = 500
 
 H_LOW = 50
-H_HIGH = 70
-S_LOW = 170#30#80
+H_HIGH = 80
+S_LOW = 100#30#80
 S_HIGH = 255
-V_LOW = 20#70#80
+V_LOW = 10#70#80
 V_HIGH = 255
 
 MORPH_KERNEL = None#np.ones((3, 3), np.uint8)
@@ -59,8 +59,7 @@ def findHulls(src):
     # Find edges
     dst = cv2.Canny(src, canny_thresh, canny_thresh*2)
     # Find countours
-    contours, _ = cv2.findContours(dst, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-
+    contours, _ = cv2.findContours(dst, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     # Get convex hull for each contour
     hulls = []
     for i in range(len(contours)):
@@ -91,9 +90,9 @@ def findBox(hull):
 def findFittedLineAngle(hull, drawing):
     rows,cols = drawing.shape[:2]
     [vx,vy,x,y] = cv2.fitLine(hull, cv2.DIST_L2, 0, 0.01, 0.01)
-    #lefty = int((-x*vy/vx) + y)
-    #righty = int(((cols-x)*vy/vx)+y)
-    #cv2.line(drawing,(cols-1,righty),(0,lefty),(0,255,0),2)
+    lefty = int((-x*vy/vx) + y)
+    righty = int(((cols-x)*vy/vx)+y)
+    cv2.line(drawing,(cols-1,righty),(0,lefty),(0,255,0),2)
 
     angle = np.arctan(vy/vx)
     angle = np.rad2deg(angle)
@@ -103,13 +102,29 @@ def findFittedLineAngle(hull, drawing):
     #cv2.putText(drawing,text,(10,400), font, 1,(255,255,255),2,cv2.LINE_AA)
 
 
+def findBoxAngle(box):
+    points = cv2.boxPoints(box)
+    d1 = cv2.norm(points[0] - points[1])
+    d2 = cv2.norm(points[1] - points[2])
+    angle = np.arctan((points[0][1] - points[3][1])/(points[0][0] - points[3][0]))
+    angle = angle + (90 if d2 > d1 else 0)
+    return angle - 90
+
+
 # For each hull return a pair of its minAreaRect and respective angle
 def findBoxesAndAngles(hulls, drawing):
     angledBoxes = []
     for i in range(len(hulls)):
         hull = hulls[i]
         box = findBox(hull)
-        angle = findFittedLineAngle(hull, drawing)
+
+        color = (200, 0, 0) 
+        dbox = cv2.boxPoints(box)
+        dbox = np.int0(dbox)
+        cv2.drawContours(drawing,[dbox],0,color,2)
+
+        #angle = findFittedLineAngle(hull, drawing)
+        angle = findBoxAngle(box)
 
         angledBox = (box, angle)
         angledBoxes.append(angledBox)
@@ -124,12 +139,16 @@ def findTargets(angledBoxes):
         
     # Sort boxes by x position to find pairs that are actually next to each other in the image    
     angledBoxes = sorted(angledBoxes, key=lambda box: cv2.boxPoints(box[0])[0][0], reverse=True)
+    #print(len(angledBoxes))
 
     for i in range(len(angledBoxes)-1):
         leftBoxAngle = angledBoxes[i][1]
         rightBoxAngle = angledBoxes[i+1][1]
 
-        if leftBoxAngle > 0 and rightBoxAngle < 0:
+        #print(leftBoxAngle)
+
+        #if leftBoxAngle > 0 and rightBoxAngle < 0:
+        if rightBoxAngle - leftBoxAngle > 0:
             targets.append((angledBoxes[i], angledBoxes[i+1]))
     return targets
 
@@ -189,7 +208,7 @@ class AveragingBuffer(object):
 ab = AveragingBuffer(10)
 
 # pandas
-columns = ['yDistance', 'xDistance', 'theta', 'width', 'height', 'centerX', 'centerY', 'aspectRatio', 'heightRatio']
+columns = ['yDistance', 'xDistance', 'theta', 'width', 'height', 'centerX', 'centerY', 'aspectRatio', 'heightRatio', 'yDiff']
 df = pd.DataFrame(columns=columns)
 currentIndex = 0
 
@@ -237,6 +256,8 @@ def visionLoop():
     dst = closeFrame(dst)
     dst = openFrame(dst)
 
+    cv2.imshow('mid', dst)
+
     #cv2.imshow("bruh", dst)
 
     # Find convex hulls over thresholded image
@@ -245,6 +266,8 @@ def visionLoop():
 
     # Sort hulls by area, biggest area first
     hulls = sorted(hulls, key=lambda cnt: cv2.contourArea(cnt), reverse=True)
+
+    #print(hulls)
 
     # Initialize mat for target box drawing
     #drawing = np.zeros((dst.shape[0], dst.shape[1], 3), dtype=np.uint8)
@@ -255,7 +278,7 @@ def visionLoop():
         # Analyze boxes and return valid targets (a target in this case is a pair of two angled boxes)
         targets = findTargets(angledBoxes)
 
-        drawContours(frame, hulls)
+        #drawContours(frame, hulls)
 
         if len(targets) > 0:
             # Arbitrairly choose the first target
@@ -285,6 +308,7 @@ def visionLoop():
             heightL = targetPoly[1][1] - targetPoly[0][1]
             heightR = targetPoly[2][1] - targetPoly[3][1]
             heightRatio = heightL/heightR
+            yDiff = targetPoly[1][1] - targetPoly[2][1]
 
 
             bboxX.config(text="BBox Center X: {0:.2f}".format(centerX))
@@ -297,7 +321,7 @@ def visionLoop():
                 xDistance = xDistSpin.get()
                 theta = thetaSpin.get()
 
-                df.loc[currentIndex] = [yDistance, xDistance, theta, width, height, centerX, centerY, aspectRatio, heightRatio]
+                df.loc[currentIndex] = [yDistance, xDistance, theta, width, height, centerX, centerY, aspectRatio, heightRatio, yDiff]
                 print(df)
                 df.to_csv("data/dataBuffer.csv")
                 currentIndex += 1
@@ -318,7 +342,7 @@ def visionLoop():
     # Average time difference over the last 10 frames
     ab.append(tElapsed)
     framerate = 1000/ab.xbar
-    print("framerate :{}".format(framerate))
+    #print("framerate :{}".format(framerate))
     cv2.putText(frame, 'Framerate: {:f}'.format(framerate), (10,450), cv2.FONT_HERSHEY_SIMPLEX, .75,(255,255,255),2, cv2.LINE_AA)
 
 
