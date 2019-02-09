@@ -6,7 +6,7 @@ import datetime
 import collections
 from datetime import timedelta
 from networktables import NetworkTables
-from robotVectorML
+import robotVectorML
 
 
 NetworkTables.initialize(server='10.22.83.2')
@@ -193,8 +193,11 @@ class AveragingBuffer(object):
         self.xbar=self.xbar+(x-self.xbar)/float(len(self.q))
 
 
+robotVectorML.loadModels()
 ab = AveragingBuffer(10)
 #cv2.namedWindow('result', cv2.WINDOW_KEEPRATIO)
+
+
 while(True):
     # Get timestamp
     tStart = datetime.datetime.now()
