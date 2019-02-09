@@ -5,12 +5,12 @@ import cv2
 import datetime
 import collections
 from datetime import timedelta
-#from networktables import NetworkTables
+from networktables import NetworkTables
 from robotVector import calculateRobotVector
 
 
-#NetworkTables.initialize(server='10.22.83.2')
-#table = NetworkTables.getDefault().getTable('SmartDashboard')
+NetworkTables.initialize(server='10.22.83.2')
+table = NetworkTables.getDefault().getTable('SmartDashboard')
 
 
 IMAGE_HEIGHT = 360
@@ -264,12 +264,12 @@ while(True):
             maxVL = targetPoly[2][1] 
             #calculateRobotVector(minU, maxU, maxVL, maxVR)
 
-            #table.putNumber("rpi/center X", centerX)
-            #table.putNumber("rpi/center Y", centerY)
-            #table.putNumber("rpi/width", width)
-            #table.putNumber("rpi/height", height)
-            #table.putNumber("rpi/aspect ratio", aspectRatio)
-            #print(centerX)
+            table.putNumber("rpi/center X", centerX)
+            table.putNumber("rpi/center Y", centerY)
+            table.putNumber("rpi/width", width)
+            table.putNumber("rpi/height", height)
+            table.putNumber("rpi/aspect ratio", aspectRatio)
+            print(centerX)
 
 
     # Get timestamp and calculate time difference
@@ -287,8 +287,8 @@ while(True):
     cv2.imshow('result', frame)
 
     # Send data to dashboard
-    #table.putBoolean("DB/LED 0", True)
-    #table.putNumber("rpi/framrate", framerate)
+    table.putBoolean("DB/LED 0", True)
+    table.putNumber("rpi/framrate", framerate)
 
 
     #if cv2.waitKey(1) & 0xFF == ord('q'):
