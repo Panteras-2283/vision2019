@@ -6,7 +6,7 @@ import datetime
 import collections
 from datetime import timedelta
 from networktables import NetworkTables
-from robotVector import calculateRobotVector
+from robotVectorML
 
 
 NetworkTables.initialize(server='10.22.83.2')
@@ -257,12 +257,11 @@ while(True):
             heightL = targetPoly[1][1] - targetPoly[0][1]
             heightR = targetPoly[2][1] - targetPoly[3][1]
             heightRatio = heightL/heightR
+            yDiff = targetPoly[1][1] - targetPoly[2][1]
 
-            maxU = targetPoly[0][0] 
-            minU = targetPoly[2][0] 
-            maxVR = targetPoly[1][1] 
-            maxVL = targetPoly[2][1] 
-            #calculateRobotVector(minU, maxU, maxVL, maxVR)
+
+            data = (width, height, centerX, centerY, aspectRatio, heightRatio, yDiff)
+            robotVectorML.calculateRobotVector(data)
 
             table.putNumber("rpi/center X", centerX)
             table.putNumber("rpi/center Y", centerY)
