@@ -16,7 +16,7 @@ table = NetworkTables.getDefault().getTable('SmartDashboard')
 IMAGE_HEIGHT = 360
 IMAGE_WIDTH = 640
 
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(0)
 cap.set(4, IMAGE_HEIGHT)
 cap.set(3, IMAGE_WIDTH)
 cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0)
