@@ -51,9 +51,9 @@ observation_covariance = [[50, 0, 0],
 
 def loadModels():
     global theta_gbr, x_gbr, y_mlp
-    theta_gbr = joblib.load("thetaGBR.joblib.dat")
-    x_gbr = joblib.load("xGBR.joblib.dat")
-    y_mlp = joblib.load("yMLP.joblib.dat")
+    theta_gbr = pickle.load(open("models/thetaGBR.sav", 'rb')) #joblib.load("thetaGBR.joblib.dat")
+    x_gbr = pickle.load(open("models/xGBR.sav", 'rb')) #joblib.load("xGBR.joblib.dat")
+    y_mlp = pickle.load(open("models/yMLP.sav", 'rb')) #joblib.load("yMLP.joblib.dat")
 
 
 def initKalman(initial_state_mean):
