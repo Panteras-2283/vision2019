@@ -24,9 +24,9 @@ y_mlp = None
 # kalman filter parameters
 kf = None
 state_mean = None
-state_covariance = [[100, 0, 0, 0, 0],
+state_covariance = [[50, 0, 0, 0, 0],
                     [0, 1, 0, 0, 0],
-                    [0, 0, 100, 0, 0],
+                    [0, 0, 50, 0, 0],
                     [0, 0, 0, 1, 0],
                     [0, 0, 0, 0, 10]]
 
@@ -41,8 +41,9 @@ transition_matrix = [[1, 1, 0, 0, 0],
                      [0, 0, 0, 1, 0],
                      [0, 0, 0, 0, 1]]
 
-observation_covariance = [[100, 0, 0],
-                          [0, 100, 0],
+
+observation_covariance = [[50, 0, 0],
+                          [0, 50, 0],
                           [0, 0,  10]]
 
 
@@ -59,9 +60,9 @@ def initKalman(initial_state_mean):
     global kf, state_mean
     state_mean = initial_state_mean
     kf = KalmanFilter(transition_matrices = transition_matrix,
-                      observation_matrices=observation_matrix,
-                      initial_state_mean=initial_state_mean,
-                      initial_state_covariance=state_covariance, 
+                      observation_matrices = observation_matrix,
+                      initial_state_mean = initial_state_mean,
+                      initial_state_covariance = state_covariance, 
                       observation_covariance = observation_covariance)
 
 tLast = 0
@@ -90,22 +91,20 @@ def calculateRobotVector(data, resetKalman):
 
         observation = [x, y, theta]
 
-        state_mean, state_covariance = kf.filter_update(filtered_state_mean=state_mean,
+        transition_matrix = np.array([[1, 1, 0, 0, 0],
+                     		 [0, 1, 0, 0, 0],
+                     		 [0, 0, 1, 1, 0],
+                     		 [0, 0, 0, 1, 0],
+                     		 [0, 0, 0, 0, 1]])
+
+        state_mean, state_covariance = kf.filter_update(transition_matrix=transition_matrix,
+        											  filtered_state_mean=state_mean,
                                                       filtered_state_covariance=state_covariance,
                                                       observation=observation)
 
-    #x_new, _, y_new, _ = stateMean
     x_new = state_mean[0]
     y_new = state_mean[2]
     theta_new = state_mean[4]
-
-    # thetaAB.append(theta)
-    # xAB.append(x)
-    # yAB.append(y)
-
-    #thetaAvg = thetaAB.xbar
-    #xAvg = xAB.xbar
-    #yAvg = yAB.xbar
 
     robotPoint = (x_new, y_new)
 
@@ -145,20 +144,3 @@ def draw(targetPoint, angle):
     root.update()
 
 
-# class AveragingBuffer(object):
-#    def __init__(self, maxlen):
-#        assert( maxlen>1)
-#        self.q=collections.deque(maxlen=maxlen)
-#        self.xbar=0.0
-#    def append(self, x):
-#        if len(self.q)==self.q.maxlen:
-#            # remove first item, update running average
-#            d=self.q.popleft()
-#            self.xbar=self.xbar+(self.xbar-d)/float(len(self.q))
-#        # append new item, update running average
-#        self.q.append(x)
-#        self.xbar=self.xbar+(x-self.xbar)/float(len(self.q))
-#
-#thetaAB = AveragingBuffer(5)
-#xAB = AveragingBuffer(5)
-#yAB = AveragingBuffer(5)

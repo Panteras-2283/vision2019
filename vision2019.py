@@ -16,7 +16,7 @@ table = NetworkTables.getDefault().getTable('SmartDashboard')
 IMAGE_HEIGHT = 360
 IMAGE_WIDTH = 640
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(1)
 cap.set(4, IMAGE_HEIGHT)
 cap.set(3, IMAGE_WIDTH)
 cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0)
@@ -26,11 +26,11 @@ cap.set(cv2.CAP_PROP_EXPOSURE, -15.0)
 canny_thresh = 100
 min_hull_area = 500
 
-H_LOW = 60
-H_HIGH = 90
+H_LOW = 50
+H_HIGH = 70
 S_LOW = 100#30#80
 S_HIGH = 255
-V_LOW = 20#70#80
+V_LOW = 30#70#80
 V_HIGH = 255
 
 MORPH_KERNEL = None#np.ones((3, 3), np.uint8)
@@ -130,12 +130,12 @@ def findBoxesAndAngles(hulls, drawing):
         color = (200, 0, 0) 
         dbox = cv2.boxPoints(box)
         dbox = np.int0(dbox)
-        cv2.drawContours(drawing,[dbox],0,color,2)
+        #cv2.drawContours(drawing,[dbox],0,color,2)
 
         #angle = findFittedLineAngle(hull, drawing)
         angle = findBoxAngle(box)
 
-        angledBox = (box, angle)
+        angledBox = (box, angle, hull)
         angledBoxes.append(angledBox)
 
     return angledBoxes
@@ -161,32 +161,46 @@ def findTargets(angledBoxes):
             targets.append((angledBoxes[i], angledBoxes[i+1]))
     return targets
 
+def findHullMinsAndMaxs(hulls):
+    minX, minY, maxX, maxY = 10000000, 1000000, 0, 0
+    for hull in hulls:
+        for point in hull:
+            x, y = point[0][0], point[0][1] 
+            minX = min(x, minX)
+            minY = min(y, minY)
+            maxX = max(x, maxX)
+            maxY = max(y, maxY)
+    return (minX, minY, maxX, maxY)
+
 # Get bounding box from target pair
 def sorroundTargetWithBox(target):
-    points = cv2.boxPoints(target[0][0])
-    points = np.append(points, cv2.boxPoints(target[1][0]))
-    minX, minY, maxX, maxY = 10000000, 1000000, 0, 0
-    for i in range(0, len(points), 2):
-        x, y = points[i], points[i+1] 
-        minX = min(x, minX)
-        minY = min(y, minY)
-        maxX = max(x, maxX)
-        maxY = max(y, maxY)
-    return (minX, minY, maxX, maxY)
+    #points = cv2.boxPoints(target[0][0])
+    #points = np.append(points, cv2.boxPoints(target[1][0]))
+    #minX, minY, maxX, maxY = 10000000, 1000000, 0, 0
+    #for i in range(0, len(points), 2):
+    #    x, y = points[i], points[i+1] 
+    #    minX = min(x, minX)
+    #    minY = min(y, minY)
+    #    maxX = max(x, maxX)
+    #    maxY = max(y, maxY)
+    #return (minX, minY, maxX, maxY)
+    return findHullMinsAndMaxs([target[0][2], target[1][2]])
 
 # Point order from https://namkeenman.wordpress.com/2015/12/18/open-cv-determine-angle-of-rotatedrect-minarearect
 def sorroundTargetPoly(target):
-    leftRectPoints = cv2.boxPoints(target[0][0])
-    rightRectPoints = cv2.boxPoints(target[1][0])
+    #leftRectPoints = cv2.boxPoints(target[0][0])
+    #rightRectPoints = cv2.boxPoints(target[1][0])
     #print(leftRectPoints)
+    leftPoints = findHullMinsAndMaxs([target[0][2]])
+    rightPoints = findHullMinsAndMaxs([target[1][2]])
 
                                         # Target seen at an angle
-    minX = leftRectPoints[3][0]         #       maxYL
-    maxX = rightRectPoints[1][0]        #         /-------/              maxYR
-    minYL = leftRectPoints[0][1]        #        /       /          \------\               |¯¯¯---____
-    maxYL = leftRectPoints[2][1]        #       /       /            \      \        =>    |          |
-    minYR = rightRectPoints[0][1]       #      /       /              \      \             |          |
-    maxYR = rightRectPoints[2][1]       #     /       /                \______\            |____---¯¯¯
+    minX = leftPoints[2]#leftRectPoints[3][0]         #       maxYL
+    maxX = rightPoints[0]#rightRectPoints[1][0]        #         /-------/              maxYR
+    minYL = leftPoints[1]#leftRectPoints[0][1]        #        /       /          \------\               |¯¯¯---____
+    maxYL = leftPoints[3]#leftRectPoints[2][1]        #       /       /            \      \        =>    |          |
+    minYR = rightPoints[1]#rightRectPoints[0][1]       #      /       /              \      \             |          |
+    maxYR = rightPoints[3]#rightRectPoints[2][1]       #     /       /                \______\            |____---¯¯¯
                                         #    /_______/               minYR     maxX
                                         #  minX     minYL       
 
@@ -195,7 +209,7 @@ def sorroundTargetPoly(target):
 
 # Drawing utilities
 def drawContours(img, contours):
-    cv2.drawContours(img, contours, -1, (255, 0,0), 3)
+    cv2.drawContours(img, contours, -1, (255, 0,0), 2)
 
 class AveragingBuffer(object):
     def __init__(self, maxlen):
@@ -224,9 +238,9 @@ while(True):
 
     # Capture frame-by-frame
     ret, frame = cap.read()
-
+    dst = frame
     # Image preprocessing and thresholding
-    dst = smoothImage(frame)
+    #dst = smoothImage(frame)
     dst = cv2.cvtColor(dst, cv2.COLOR_BGR2HSV)
     dst = hsvThreshold(dst)
     dst = closeFrame(dst)
