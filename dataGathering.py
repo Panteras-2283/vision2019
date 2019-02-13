@@ -15,20 +15,20 @@ cap = cv2.VideoCapture(0)
 cap.set(4, IMAGE_HEIGHT)
 cap.set(3, IMAGE_WIDTH)
 cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0)
-cap.set(cv2.CAP_PROP_EXPOSURE, -20.0)
+cap.set(cv2.CAP_PROP_EXPOSURE, -15.0)
 
 # Global variables
 canny_thresh = 100
 min_hull_area = 500
 
-H_LOW = 50
-H_HIGH = 80
+H_LOW = 60
+H_HIGH = 90
 S_LOW = 100#30#80
 S_HIGH = 255
-V_LOW = 10#70#80
+V_LOW = 42#70#80
 V_HIGH = 255
 
-MORPH_KERNEL = None#np.ones((3, 3), np.uint8)
+MORPH_KERNEL = None #np.ones((3, 3), np.uint8)
 MORPH_ANCHOR = (-1, -1)
 MORPH_ITERATIONS = 3
 MORPH_BORDER_TYPE = cv2.BORDER_CONSTANT

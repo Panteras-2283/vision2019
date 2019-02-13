@@ -20,15 +20,15 @@ cap = cv2.VideoCapture(0)
 cap.set(4, IMAGE_HEIGHT)
 cap.set(3, IMAGE_WIDTH)
 cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0)
-cap.set(cv2.CAP_PROP_EXPOSURE, -50.0)
+cap.set(cv2.CAP_PROP_EXPOSURE, -15.0)
 
 # Global variables
 canny_thresh = 100
 min_hull_area = 500
 
-H_LOW = 50
-H_HIGH = 70
-S_LOW = 170#30#80
+H_LOW = 60
+H_HIGH = 90
+S_LOW = 100#30#80
 S_HIGH = 255
 V_LOW = 20#70#80
 V_HIGH = 255
@@ -64,8 +64,7 @@ def findHulls(src):
     # Find edges
     dst = cv2.Canny(src, canny_thresh, canny_thresh*2)
     # Find countours
-    contours, _ = cv2.findContours(dst, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-
+    contours, _ = cv2.findContours(dst, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     # Get convex hull for each contour
     hulls = []
     for i in range(len(contours)):
@@ -96,9 +95,9 @@ def findBox(hull):
 def findFittedLineAngle(hull, drawing):
     rows,cols = drawing.shape[:2]
     [vx,vy,x,y] = cv2.fitLine(hull, cv2.DIST_L2, 0, 0.01, 0.01)
-    #lefty = int((-x*vy/vx) + y)
-    #righty = int(((cols-x)*vy/vx)+y)
-    #cv2.line(drawing,(cols-1,righty),(0,lefty),(0,255,0),2)
+    lefty = int((-x*vy/vx) + y)
+    righty = int(((cols-x)*vy/vx)+y)
+    cv2.line(drawing,(cols-1,righty),(0,lefty),(0,255,0),2)
 
     angle = np.arctan(vy/vx)
     angle = np.rad2deg(angle)
@@ -108,13 +107,33 @@ def findFittedLineAngle(hull, drawing):
     #cv2.putText(drawing,text,(10,400), font, 1,(255,255,255),2,cv2.LINE_AA)
 
 
+def findBoxAngle(box):
+    points = cv2.boxPoints(box)
+    d1 = cv2.norm(points[0] - points[1])
+    d2 = cv2.norm(points[1] - points[2])
+    if points[0][0] - points[3][0] != 0:
+        angle = np.arctan((points[0][1] - points[3][1])/(points[0][0] - points[3][0]))
+        angle = angle + (90 if d2 > d1 else 0)
+        return angle - 90
+    else:
+        return 0
+    
+
+
 # For each hull return a pair of its minAreaRect and respective angle
 def findBoxesAndAngles(hulls, drawing):
     angledBoxes = []
     for i in range(len(hulls)):
         hull = hulls[i]
         box = findBox(hull)
-        angle = findFittedLineAngle(hull, drawing)
+
+        color = (200, 0, 0) 
+        dbox = cv2.boxPoints(box)
+        dbox = np.int0(dbox)
+        cv2.drawContours(drawing,[dbox],0,color,2)
+
+        #angle = findFittedLineAngle(hull, drawing)
+        angle = findBoxAngle(box)
 
         angledBox = (box, angle)
         angledBoxes.append(angledBox)
@@ -129,12 +148,16 @@ def findTargets(angledBoxes):
         
     # Sort boxes by x position to find pairs that are actually next to each other in the image    
     angledBoxes = sorted(angledBoxes, key=lambda box: cv2.boxPoints(box[0])[0][0], reverse=True)
+    #print(len(angledBoxes))
 
     for i in range(len(angledBoxes)-1):
         leftBoxAngle = angledBoxes[i][1]
         rightBoxAngle = angledBoxes[i+1][1]
 
-        if leftBoxAngle > 0 and rightBoxAngle < 0:
+        #print(leftBoxAngle)
+
+        #if leftBoxAngle > 0 and rightBoxAngle < 0:
+        if rightBoxAngle - leftBoxAngle > 0:
             targets.append((angledBoxes[i], angledBoxes[i+1]))
     return targets
 
@@ -145,10 +168,6 @@ def sorroundTargetWithBox(target):
     minX, minY, maxX, maxY = 10000000, 1000000, 0, 0
     for i in range(0, len(points), 2):
         x, y = points[i], points[i+1] 
-        #minX = x if x < minX else minX
-        #minY = y if y < minY else minY
-        #maxX = x if x > maxX else maxX
-        #maxY = y if y > maxY else maxY
         minX = min(x, minX)
         minY = min(y, minY)
         maxX = max(x, maxX)
@@ -195,6 +214,7 @@ class AveragingBuffer(object):
 
 robotVectorML.loadModels()
 ab = AveragingBuffer(10)
+targetFound = False
 #cv2.namedWindow('result', cv2.WINDOW_KEEPRATIO)
 
 
@@ -250,8 +270,8 @@ while(True):
             cv2.polylines(frame, [pts], True, color, thickness=2)
 
             # box properties
-            centerX = (targetBox[0] + targetBox[2])/2
-            centerY = (targetBox[1] + targetBox[3])/2
+            centerX = ((targetBox[0] + targetBox[2])/2) - IMAGE_WIDTH/2
+            centerY = ((targetBox[1] + targetBox[3])/2) - (IMAGE_HEIGHT/2)
             width = targetBox[2] - targetBox[0]
             height = targetBox[3] - targetBox[1]
             aspectRatio = width/height
@@ -264,15 +284,19 @@ while(True):
 
 
             data = (width, height, centerX, centerY, aspectRatio, heightRatio, yDiff)
-            robotVectorML.calculateRobotVector(data)
+            robotVectorML.calculateRobotVector(data, not targetFound)
 
             table.putNumber("rpi/center X", centerX)
             table.putNumber("rpi/center Y", centerY)
             table.putNumber("rpi/width", width)
             table.putNumber("rpi/height", height)
             table.putNumber("rpi/aspect ratio", aspectRatio)
-            print(centerX)
-
+            #print(centerX)
+            targetFound = True
+        else:
+            targetFound = False
+    else:
+        targetFound = False
 
     # Get timestamp and calculate time difference
     tEnd = datetime.datetime.now()
