@@ -10,6 +10,7 @@ import collections
 import pykalman
 from pykalman import KalmanFilter
 import time
+from tkinter import *
 
 
 root = Tk()
@@ -51,9 +52,9 @@ observation_covariance = [[50, 0, 0],
 
 def loadModels():
     global theta_gbr, x_gbr, y_mlp
-    theta_gbr = pickle.load(open("models/thetaGBR.sav", 'rb')) #joblib.load("thetaGBR.joblib.dat")
-    x_gbr = pickle.load(open("models/xGBR.sav", 'rb')) #joblib.load("xGBR.joblib.dat")
-    y_mlp = pickle.load(open("models/yMLP.sav", 'rb')) #joblib.load("yMLP.joblib.dat")
+    theta_gbr = joblib.load("thetaGBR.joblib.dat")
+    x_gbr = joblib.load("xGBR.joblib.dat")
+    y_mlp = joblib.load("yMLP.joblib.dat")
 
 
 def initKalman(initial_state_mean):
@@ -128,7 +129,7 @@ def draw(targetPoint, angle):
     y = 3 * y
 
     canvas.delete("all")
-    canvas.create_line(160, 50, 240, 50, fill="#00ff00")
+    canvas.create_line(160, 50, 240, 50, fill="#00ff00", width=10)
 
     robot = (200 - x, 50 + y)
     lineLength = 50
@@ -137,7 +138,14 @@ def draw(targetPoint, angle):
                robot[1] - lineLength * math.sin(lineAngle))
 
     canvas.create_line(robot[0], robot[1], lineEnd[0],
-                       lineEnd[1], fill="#ff0000")
+                       lineEnd[1], fill="#ff0000", width=5)
+
+
+    #png = PhotoImage(file='Outline Ajolote.png')
+    #scale_w = 50/776
+    #scale_h = 50/776
+    #png = png.subsample(5)
+    #canvas.create_image(x, y, image=png, anchor=NW)
 
     canvas.pack()
     # root.geometry("400x400")

@@ -16,7 +16,7 @@ table = NetworkTables.getDefault().getTable('SmartDashboard')
 IMAGE_HEIGHT = 360
 IMAGE_WIDTH = 640
 
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(0)
 cap.set(4, IMAGE_HEIGHT)
 cap.set(3, IMAGE_WIDTH)
 cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0)
@@ -30,10 +30,10 @@ H_LOW = 50
 H_HIGH = 70
 S_LOW = 100#30#80
 S_HIGH = 255
-V_LOW = 30#70#80
+V_LOW = 20#70#80
 V_HIGH = 255
 
-MORPH_KERNEL = None#np.ones((3, 3), np.uint8)
+MORPH_KERNEL = None
 MORPH_ANCHOR = (-1, -1)
 MORPH_ITERATIONS = 3
 MORPH_BORDER_TYPE = cv2.BORDER_CONSTANT
@@ -195,12 +195,12 @@ def sorroundTargetPoly(target):
     rightPoints = findHullMinsAndMaxs([target[1][2]])
 
                                         # Target seen at an angle
-    minX = leftPoints[2]#leftRectPoints[3][0]         #       maxYL
-    maxX = rightPoints[0]#rightRectPoints[1][0]        #         /-------/              maxYR
-    minYL = leftPoints[1]#leftRectPoints[0][1]        #        /       /          \------\               |¯¯¯---____
-    maxYL = leftPoints[3]#leftRectPoints[2][1]        #       /       /            \      \        =>    |          |
-    minYR = rightPoints[1]#rightRectPoints[0][1]       #      /       /              \      \             |          |
-    maxYR = rightPoints[3]#rightRectPoints[2][1]       #     /       /                \______\            |____---¯¯¯
+    minX = leftPoints[2]                #       maxYL
+    maxX = rightPoints[0]               #         /-------/              maxYR
+    minYL = leftPoints[1]               #        /       /          \------\               |¯¯¯---____
+    maxYL = leftPoints[3]               #       /       /            \      \        =>    |          |
+    minYR = rightPoints[1]              #      /       /              \      \             |          |
+    maxYR = rightPoints[3]              #     /       /                \______\            |____---¯¯¯
                                         #    /_______/               minYR     maxX
                                         #  minX     minYL       
 
@@ -331,7 +331,7 @@ while(True):
     table.putNumber("rpi/framrate", framerate)
 
 
-    #if cv2.waitKey(1) & 0xFF == ord('q'):
+    if cv2.waitKey(1): pass# & 0xFF == ord('q'):
     #    break
 
 # When everything done, release the capture
