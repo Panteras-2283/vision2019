@@ -19,15 +19,17 @@ IMAGE_WIDTH = 640
 cap = cv2.VideoCapture(0)
 cap.set(4, IMAGE_HEIGHT)
 cap.set(3, IMAGE_WIDTH)
-cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0)
-cap.set(cv2.CAP_PROP_EXPOSURE, -15.0)
+#cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0)
+#cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, False)
+#cap.set(cv2.CAP_PROP_EXPOSURE, -15.0)
+#cap.set(cv2.CAP_PROP_GAIN, -15.0)
 
 # Global variables
 canny_thresh = 100
 min_hull_area = 500
 
 H_LOW = 50
-H_HIGH = 70
+H_HIGH = 80
 S_LOW = 100#30#80
 S_HIGH = 255
 V_LOW = 20#70#80
@@ -64,7 +66,7 @@ def findHulls(src):
     # Find edges
     dst = cv2.Canny(src, canny_thresh, canny_thresh*2)
     # Find countours
-    contours, _ = cv2.findContours(dst, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    _, contours, _ = cv2.findContours(dst, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     # Get convex hull for each contour
     hulls = []
     for i in range(len(contours)):
@@ -117,7 +119,6 @@ def findBoxAngle(box):
         return angle - 90
     else:
         return 0
-    
 
 
 # For each hull return a pair of its minAreaRect and respective angle
@@ -127,7 +128,7 @@ def findBoxesAndAngles(hulls, drawing):
         hull = hulls[i]
         box = findBox(hull)
 
-        color = (200, 0, 0) 
+        color = (200, 0, 0)
         dbox = cv2.boxPoints(box)
         dbox = np.int0(dbox)
         #cv2.drawContours(drawing,[dbox],0,color,2)
@@ -226,7 +227,7 @@ class AveragingBuffer(object):
         self.xbar=self.xbar+(x-self.xbar)/float(len(self.q))
 
 
-robotVectorML.loadModels()
+#robotVectorML.loadModels()
 ab = AveragingBuffer(10)
 targetFound = False
 #cv2.namedWindow('result', cv2.WINDOW_KEEPRATIO)
@@ -245,6 +246,11 @@ while(True):
     dst = hsvThreshold(dst)
     dst = closeFrame(dst)
     dst = openFrame(dst)
+
+    cv2.imshow("result", frame)
+    cv2.waitKey(1)
+    continue
+
 
     #cv2.imshow("bruh", dst)
 
@@ -298,7 +304,7 @@ while(True):
 
 
             data = (width, height, centerX, centerY, aspectRatio, heightRatio, yDiff)
-            robotVectorML.calculateRobotVector(data, not targetFound)
+            #robotVectorML.calculateRobotVector(data, not targetFound)
 
             table.putNumber("rpi/center X", centerX)
             table.putNumber("rpi/center Y", centerY)
@@ -325,6 +331,7 @@ while(True):
 
     # Display original frame with target box on top
     cv2.imshow('result', frame)
+    cv2.waitKey(1)
 
     # Send data to dashboard
     table.putBoolean("DB/LED 0", True)

@@ -52,9 +52,15 @@ observation_covariance = [[50, 0, 0],
 
 def loadModels():
     global theta_gbr, x_gbr, y_mlp
+<<<<<<< HEAD
     theta_gbr = joblib.load("thetaGBR.joblib.dat")
     x_gbr = joblib.load("xGBR.joblib.dat")
     y_mlp = joblib.load("yMLP.joblib.dat")
+=======
+    theta_gbr = joblib.load("models/rasp/thetaMLP.joblib.dat")
+    x_gbr = joblib.load("models/rasp/xMLP.joblib.dat")
+    y_mlp = joblib.load("models/rasp/yMLP.joblib.dat")
+>>>>>>> 42121b8e3c63cccd5faefa78db7d89bfae470856
 
 
 def initKalman(initial_state_mean):
